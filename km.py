@@ -1,7 +1,9 @@
 from datetime import datetime
-import urllib
+import os
 import socket
-
+import sys
+import time
+import urllib
 
 class KM(object):
     _id = None
@@ -23,6 +25,10 @@ class KM(object):
             cls._use_cron = use_cron
         if to_stderr is not None:
             cls._to_stderr = to_stderr
+        try:
+            cls.log_dir_writable()
+        except Exception, e:
+            cls.log_error(e)
 
     @classmethod
     def identify(cls, id):
@@ -109,3 +115,41 @@ class KM(object):
             sock.close()
         except:
             cls.logm("Could not transmit to " + cls._host)
+
+    @classmethod
+    def log_name(cls, type):
+        if type in cls._logs:
+            return cls._logs[type]
+        fname = ''
+        if type == 'error':
+            fname = 'kissmetrics_error.log'
+        elif type == 'query':
+            fname = 'kissmetrics_query.log'
+        elif type == 'send':
+            fname = '%dkissmetrics_sending.log' % time.time()
+        cls._logs[type] = os.path.join(cls._log_dir, fname)
+        return cls._logs[type]
+
+    @classmethod
+    def log_error(cls, msg):
+        msg = datetime.now().strftime("<%c> ") + unicode(msg)
+        if cls._to_stderr:
+            print >>sys.stderr, msg
+        return cls.log('error', msg)
+
+    @classmethod
+    def log(cls, type, msg):
+        try:
+            fh = open(cls.log_name(type), 'a')
+            print >>fh, msg
+            fh.close()
+        except:
+            pass                        # just discard at this point
+
+    @classmethod
+    def log_dir_writable(cls):
+        if not os.access(cls._log_dir, os.W_OK) and cls._to_stderr:
+            print >>sys.stderr, (
+                "Couldn't open %s for writing. Does %s exist? Permissions?" %
+                (cls.log_name('query'), cls._log_dir)
+            )

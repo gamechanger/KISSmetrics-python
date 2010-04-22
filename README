@@ -7,7 +7,7 @@ Find out more at http://www.kissmetrics.com
 
 * ruby client is complete with crontab option
 * php client is complete with crontab option
-* python client does not support crontab
+* python client is complete with crontab option (untested)
 * perl client is complete with crontab option (untested)
 
 TODO:

@@ -1,5 +1,8 @@
+#!/usr/bin/python
+
 from datetime import datetime
 import os
+import shutil
 import socket
 import sys
 import time
@@ -64,6 +67,27 @@ class KM(object):
             if not cls.is_initialized_and_identified():
                 return
             cls.generate_query('s', data)
+        except Exception, e:
+            cls.log_error(e)
+
+    @classmethod
+    def send_logged_queries(cls):
+        try:
+            query_name = cls.log_name('query')
+            if not os.path.exists(query_name):
+                return
+            send_name = cls.log_name('send')
+            shutil.move(query_name, send_name)
+            with open(send_name) as log:
+                for line in log:
+                    try:
+                        line = line.rstrip()
+                        cls.send_query(line)
+                    except Exception, e:
+                        if line:
+                            cls.log_query(line)
+                        cls.log_error(e)
+            os.unlink(send_name)
         except Exception, e:
             cls.log_error(e)
 
@@ -158,3 +182,20 @@ class KM(object):
             cls.log_error("Need to initialize first: KM.init(<your_key>)")
             return False
         return True
+
+
+if __name__ == '__main__':
+    try:
+        key = sys.argv[1]
+    except IndexError:
+        print >>sys.stderr, ("At least one argument required. "
+                             "%s <km_key> [<log_dir>]" % sys.argv[0])
+        sys.exit(1)
+    log_dir, host = None, None
+    try:
+        log_dir = sys.argv[2]
+        host = sys.argv[3]
+    except IndexError:
+        pass
+    KM.init(key, log_dir=log_dir, host=host)
+    KM.send_logged_queries()

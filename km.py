@@ -5,13 +5,14 @@ import socket
 
 class KM:
     _id = None
+    _host = 'trk.kissmetrics.com:80'
     _key = None
-    _host = None
 
     @classmethod
-    def init(cls, key, host='trk.kissmetrics.com:80'):
+    def init(cls, key, host=None):
         cls._key = key
-        cls._host = host
+        if host is not None:
+            cls._host = host
 
     @classmethod
     def identify(cls, id):

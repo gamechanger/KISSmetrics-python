@@ -68,68 +68,10 @@ class KM(object):
             cls.log_error(e)
 
     @classmethod
-    def log_file(cls):
-        return '/tmp/kissmetrics_error.log'
-
-    @classmethod
     def reset(cls):
         cls._id = None
         cls._key = None
         cls._logs = {}
-
-    @classmethod
-    def check_identify(cls):
-        if cls._id == None:
-            raise Exception("Need to identify first (KM.identify <user>)")
-
-    @classmethod
-    def check_init(cls):
-        if cls._key == None:
-            raise Exception("Need to initialize first (KM.init <your_key>)")
-
-    @classmethod
-    def now(cls):
-        return datetime.now()
-
-    @classmethod
-    def check_id_key(cls):
-        cls.check_init()
-        cls.check_identify()
-
-    @classmethod
-    def logm(cls, msg):
-        msg = cls.now().strftime('<%c> ') + msg
-        try:
-            fh = open(cls.log_file(), 'a')
-            fh.write(msg)
-            fh.close()
-        except IOError:
-            pass #just discard at this point
-
-    @classmethod
-    def request(cls, type, data, update=True):
-        query = []
-        data.update({'_k': cls._key, '_t': cls.now().strftime('%s')})
-        if update:
-            data.update({'_p': cls._id})
-
-        for key, val in data.items():
-            query.append(urllib.quote(str(key)) + '=' + urllib.quote(str(val)))
-
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            host, port = cls.host.split(':')
-            sock.connect((host, int(port)))
-            sock.setblocking(0) # 0 is non-blocking
-
-            get = 'GET /' + type + '?' + '&'.join(query) + " HTTP/1.1\r\n"
-            out = get
-            out += "Host: " + socket.gethostname() + "\r\n"
-            out += "Connection: Close\r\n\r\n"
-            sock.send(out)
-            sock.close()
-        except:
-            cls.logm("Could not transmit to " + cls.host)
 
     @classmethod
     def log_name(cls, type):

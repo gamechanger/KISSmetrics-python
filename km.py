@@ -9,8 +9,8 @@ import urlparse
 
 class KM(object):
     _id = None
-    _host = 'trk.kissmetrics.com:80'
-    _log_dir = '/tmp'
+    host = 'trk.kissmetrics.com:80'
+    log_dir = '/tmp'
     _key = None
     _logs = {}
     _to_stderr = True
@@ -20,9 +20,9 @@ class KM(object):
     def init(cls, key, host=None, log_dir=None, use_cron=None, to_stderr=None):
         cls._key = key
         if host is not None:
-            cls._host = host
+            cls.host = host
         if log_dir is not None:
-            cls._log_dir = log_dir
+            cls.log_dir = log_dir
         if use_cron is not None:
             cls._use_cron = use_cron
         if to_stderr is not None:
@@ -75,6 +75,7 @@ class KM(object):
     def reset(cls):
         cls._id = None
         cls._key = None
+        cls._logs = {}
 
     @classmethod
     def check_identify(cls):
@@ -117,7 +118,7 @@ class KM(object):
 
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            host, port = cls._host.split(':')
+            host, port = cls.host.split(':')
             sock.connect((host, int(port)))
             sock.setblocking(0) # 0 is non-blocking
 
@@ -128,7 +129,7 @@ class KM(object):
             sock.send(out)
             sock.close()
         except:
-            cls.logm("Could not transmit to " + cls._host)
+            cls.logm("Could not transmit to " + cls.host)
 
     @classmethod
     def log_name(cls, type):
@@ -141,7 +142,7 @@ class KM(object):
             fname = 'kissmetrics_query.log'
         elif type == 'send':
             fname = '%dkissmetrics_sending.log' % time.time()
-        cls._logs[type] = os.path.join(cls._log_dir, fname)
+        cls._logs[type] = os.path.join(cls.log_dir, fname)
         return cls._logs[type]
 
     @classmethod
@@ -181,15 +182,15 @@ class KM(object):
 
     @classmethod
     def send_query(cls, line):
-        url = urlparse.urlunsplit(('http', cls._host, line, '', ''))
+        url = urlparse.urlunsplit(('http', cls.host, line, '', ''))
         urllib2.urlopen(url)
 
     @classmethod
     def log_dir_writable(cls):
-        if not os.access(cls._log_dir, os.W_OK) and cls._to_stderr:
+        if not os.access(cls.log_dir, os.W_OK) and cls._to_stderr:
             print >>sys.stderr, (
                 "Couldn't open %s for writing. Does %s exist? Permissions?" %
-                (cls.log_name('query'), cls._log_dir)
+                (cls.log_name('query'), cls.log_dir)
             )
 
     @classmethod

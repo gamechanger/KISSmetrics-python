@@ -4,6 +4,8 @@ import socket
 import sys
 import time
 import urllib
+import urllib2
+import urlparse
 
 class KM(object):
     _id = None
@@ -36,17 +38,25 @@ class KM(object):
 
     @classmethod
     def record(cls, action, props={}):
-        cls.check_id_key()
-        if isinstance(action, dict):
-            return cls.set(action)
+        try:
+            if not cls.is_initialized_and_identified():
+                return
+            if isinstance(action, dict):
+                return cls.set(action)
 
-        props.update({'_n': action})
-        cls.request('e', props)
+            props.update({'_n': action})
+            cls.generate_query('e', props)
+        except Exception, e:
+            cls.log_error(e)
 
     @classmethod
     def set(cls, data):
-        cls.check_id_key()
-        cls.request('s', data)
+        try:
+            if not cls.is_initialized_and_identified():
+                return
+            cls.generate_query('s', data)
+        except Exception, e:
+            cls.log_error(e)
 
     @classmethod
     def alias(cls, name, alias_to):
@@ -131,8 +141,12 @@ class KM(object):
         return cls._logs[type]
 
     @classmethod
+    def log_query(cls, msg):
+        return cls.log('query', msg)
+
+    @classmethod
     def log_error(cls, msg):
-        msg = datetime.now().strftime("<%c> ") + unicode(msg)
+        msg = datetime.now().strftime("<%c> ") + str(msg)
         if cls._to_stderr:
             print >>sys.stderr, msg
         return cls.log('error', msg)
@@ -147,9 +161,49 @@ class KM(object):
             pass                        # just discard at this point
 
     @classmethod
+    def generate_query(cls, type, data, update=True):
+        if update:
+            data.update({'_p': cls._id})
+        data.update({'_k': cls._key, '_t': int(time.time())})
+        query = '/%s?%s' % (urllib.quote(type), urllib.urlencode(data))
+        if cls._use_cron:
+            cls.log_query(query)
+        else:
+            try:
+                cls.send_query(query)
+            except Exception, e:
+                cls.log_query(query)
+                cls.log_error(e)
+
+    @classmethod
+    def send_query(cls, line):
+        url = urlparse.urlunsplit(('http', cls._host, line, '', ''))
+        urllib2.urlopen(url)
+
+    @classmethod
     def log_dir_writable(cls):
         if not os.access(cls._log_dir, os.W_OK) and cls._to_stderr:
             print >>sys.stderr, (
                 "Couldn't open %s for writing. Does %s exist? Permissions?" %
                 (cls.log_name('query'), cls._log_dir)
             )
+
+    @classmethod
+    def is_identified(cls):
+        if cls._id is None:
+            cls.log_error("Need to identify first: KM.identify(<user>)")
+            return False
+        return True
+
+    @classmethod
+    def is_initialized_and_identified(cls):
+        if not cls.is_initialized():
+            return False
+        return cls.is_identified()
+
+    @classmethod
+    def is_initialized(cls):
+        if cls._key is None:
+            cls.log_error("Need to initialize first: KM.init(<your_key>)")
+            return False
+        return True

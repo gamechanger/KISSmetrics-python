@@ -92,6 +92,10 @@ class KM(object):
         return cls.log('query', msg)
 
     @classmethod
+    def log_send(cls, msg):
+        return cls.log('send', msg)
+
+    @classmethod
     def log_error(cls, msg):
         msg = datetime.now().strftime("<%c> ") + str(msg)
         if cls._to_stderr:

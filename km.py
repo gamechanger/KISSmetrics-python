@@ -3,7 +3,7 @@ import urllib
 import socket
 
 
-class KM:
+class KM(object):
     _id = None
     _host = 'trk.kissmetrics.com:80'
     _key = None

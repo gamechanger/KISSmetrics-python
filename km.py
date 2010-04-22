@@ -6,13 +6,23 @@ import socket
 class KM(object):
     _id = None
     _host = 'trk.kissmetrics.com:80'
+    _log_dir = '/tmp'
     _key = None
+    _logs = {}
+    _to_stderr = True
+    _use_cron = None
 
     @classmethod
-    def init(cls, key, host=None):
+    def init(cls, key, host=None, log_dir=None, use_cron=None, to_stderr=None):
         cls._key = key
         if host is not None:
             cls._host = host
+        if log_dir is not None:
+            cls._log_dir = log_dir
+        if use_cron is not None:
+            cls._use_cron = use_cron
+        if to_stderr is not None:
+            cls._to_stderr = to_stderr
 
     @classmethod
     def identify(cls, id):

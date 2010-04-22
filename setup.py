@@ -27,6 +27,13 @@ Find out more at http://www.kissmetrics.com
     # Requires distribute
     install_requires = ['distribute'],
 
+    # Script for running cronjob
+    entry_points = {
+        'console_scripts': [
+            'kissmetrics = km:main',
+        ],
+    },
+
     # Tests
     test_suite = 'tests',
     tests_require = ['mocker'],

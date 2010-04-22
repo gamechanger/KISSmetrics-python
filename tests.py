@@ -381,5 +381,39 @@ class TestHelpers(unittest.TestCase):
         self.assertTrue(is_robot('Mozilla'))
 
 
+class TestMain(TestCase):
+    def test_args(self):
+        from km import main
+        with LogDir() as log_dir:
+            host = 'host:80'
+            km = self.mocker.replace('km.KM')
+            # First
+            km.init('key', log_dir=None, host=None)
+            self.mocker.result(None)
+            km.send_logged_queries()
+            self.mocker.result(None)
+            # Second
+            km.init('key', log_dir=log_dir, host=None)
+            self.mocker.result(None)
+            km.send_logged_queries()
+            self.mocker.result(None)
+            # Third
+            km.init('key', log_dir=log_dir, host=host)
+            self.mocker.result(None)
+            km.send_logged_queries()
+            self.mocker.result(None)
+            with self.mocker.order():
+                with StdIO() as stdio:
+                    self.assertEqual(main('km'), 1)
+                    self.assertStartsWith(stdio.stderr.getvalue(),
+                                          'At least one argument required. ')
+                # First
+                self.assertEqual(main('km', 'key'), 0)
+                # Second
+                self.assertEqual(main('km', 'key', log_dir), 0)
+                # Third
+                self.assertEqual(main('km', 'key', log_dir, host), 0)
+
+
 if __name__ == '__main__':
     unittest.main()

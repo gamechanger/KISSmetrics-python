@@ -189,18 +189,24 @@ class KM(object):
         return True
 
 
-if __name__ == '__main__':
+def main(*args):
+    if not args:
+        args = sys.argv[:]
     try:
-        key = sys.argv[1]
+        key = args[1]
     except IndexError:
         print >>sys.stderr, ("At least one argument required. "
-                             "%s <km_key> [<log_dir>]" % sys.argv[0])
-        sys.exit(1)
+                             "%s <km_key> [<log_dir>]" % args[0])
+        return 1
     log_dir, host = None, None
     try:
-        log_dir = sys.argv[2]
-        host = sys.argv[3]
+        log_dir = args[2]
+        host = args[3]
     except IndexError:
         pass
     KM.init(key, log_dir=log_dir, host=host)
     KM.send_logged_queries()
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main(*sys.argv))

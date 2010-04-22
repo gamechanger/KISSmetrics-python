@@ -80,7 +80,8 @@ class KM(object):
                 return
             send_name = cls.log_name('send')
             shutil.move(query_name, send_name)
-            with open(send_name) as log:
+            log = open(send_name)
+            try:
                 for line in log:
                     try:
                         line = line.rstrip()
@@ -89,7 +90,9 @@ class KM(object):
                         if line:
                             cls.log_query(line)
                         cls.log_error(e)
-            os.unlink(send_name)
+            finally:
+                log.close()
+                os.unlink(send_name)
         except Exception, e:
             cls.log_error(e)
 

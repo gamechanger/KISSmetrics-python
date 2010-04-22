@@ -50,6 +50,15 @@ class KM(object):
             cls.log_error(e)
 
     @classmethod
+    def alias(cls, name, alias_to):
+        try:
+            if not cls.is_initialized_and_identified():
+                return
+            cls.generate_query('a', {'_n': alias_to, '_p': name}, update=False)
+        except Exception, e:
+            cls.log_error(e)
+
+    @classmethod
     def set(cls, data):
         try:
             if not cls.is_initialized_and_identified():
@@ -57,11 +66,6 @@ class KM(object):
             cls.generate_query('s', data)
         except Exception, e:
             cls.log_error(e)
-
-    @classmethod
-    def alias(cls, name, alias_to):
-        cls.check_init()
-        cls.request('a', {'_n': alias_to, '_p': name}, False)
 
     @classmethod
     def log_file(cls):

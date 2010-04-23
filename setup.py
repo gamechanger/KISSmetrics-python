@@ -24,9 +24,6 @@ Find out more at http://www.kissmetrics.com
     keywords = 'kissmetrics',
     url = 'http://github.com/kissmetrics/KISSmetrics',
 
-    # Requires distribute
-    install_requires = ['distribute'],
-
     # Script for running cronjob
     entry_points = {
         'console_scripts': [

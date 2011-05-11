@@ -1,3 +1,7 @@
+== Reasons for the fork
+This project is a Fork of KISSMetrics api library.  This fork evolved because the python client works better when it has a setup.py file and can be installed by any standard python package installer, such as easy_install or pip.
+
+== About KISSMetrics
 KISSmetrics is different from other analytics platforms due to a combination of
 three key features. We focus on funnels and conversions and make them easy to
 track and interpret, use people as the basic unit of measure, and support

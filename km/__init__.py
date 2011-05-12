@@ -20,9 +20,10 @@ class KM(object):
     _logs = {}
     _to_stderr = True
     _use_cron = None
+    _timeout = 30 #default set by urlib2
 
     @classmethod
-    def init(cls, key, host=None, log_dir=None, use_cron=None, to_stderr=None):
+    def init(cls, key, host=None, log_dir=None, use_cron=None, to_stderr=None, timeout=None):
         cls._key = key
         if host is not None:
             cls.host = host
@@ -32,6 +33,8 @@ class KM(object):
             cls._use_cron = use_cron
         if to_stderr is not None:
             cls._to_stderr = to_stderr
+        if timeout is not None:
+            cls._timeout = timeout
         try:
             cls.log_dir_writable()
         except Exception, e:
@@ -158,7 +161,7 @@ class KM(object):
     @classmethod
     def send_query(cls, line):
         url = urlparse.urlunsplit(('http', cls.host, line, '', ''))
-        urllib2.urlopen(url)
+        urllib2.urlopen(url, timeout=cls._timeout)
 
     @classmethod
     def log_dir_writable(cls):

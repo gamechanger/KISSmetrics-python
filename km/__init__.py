@@ -1,215 +1,102 @@
-#!/usr/bin/python
+"""
+Example usage:
 
-from datetime import datetime
-import os
-import shutil
-import socket
-import sys
-import time
+km = KM('my-api-key')
+km.identify('simon')
+km.record('an event', {'attr': '1'})
+"""
+
 import urllib
-import urllib2
-import urlparse
-
+import socket
+from datetime import datetime
 
 class KM(object):
-    VERSION = '1.0.1'
-    _id = None
-    host = 'trk.kissmetrics.com:80'
-    log_dir = '/tmp'
-    _key = None
-    _logs = {}
-    _to_stderr = True
-    _use_cron = None
-    _timeout = 30 #default set by urlib2
-
-    @classmethod
-    def init(cls, key, host=None, log_dir=None, use_cron=None, to_stderr=None, timeout=None):
-        cls._key = key
-        if host is not None:
-            cls.host = host
-        if log_dir is not None:
-            cls.log_dir = log_dir
-        if use_cron is not None:
-            cls._use_cron = use_cron
-        if to_stderr is not None:
-            cls._to_stderr = to_stderr
-        if timeout is not None:
-            cls._timeout = timeout
+    def __init__(self, key, host='trk.kissmetrics.com:80', logging=True):
+        self._key    = key
+        self._host = host
+        self._logging = logging
+    
+    def identify(self, id):
+        self._id = id
+    
+    def record(self, action, props={}):
+        self.check_id_key()
+        if isinstance(action, dict):
+            self.set(action)
+        
+        props.update({'_n': action})
+        self.request('e', props)
+    
+    def set(self, data):
+        self.check_id_key()
+        self.request('s',data)
+    
+    def alias(self, name, alias_to):
+        self.check_init()
+        self.request('a', {'_n': alias_to, '_p': name}, False)
+    
+    def log_file(self):
+        return '/tmp/kissmetrics_error.log'
+    
+    def reset(self):
+        self._id = None
+        self._key = None
+    
+    def check_identify(self):
+        if self._id == None:
+            raise Exception, "Need to identify first (KM.identify <user>)"
+    
+    def check_init(self):
+        if self._key == None:
+            raise Exception, "Need to initialize first (KM.init <your_key>)"
+    
+    def now(self):
+        return datetime.utcnow()
+    
+    def check_id_key(self):
+        self.check_init()
+        self.check_identify()
+    
+    def logm(self, msg):
+        if not self._logging:
+            return
+        msg = self.now().strftime('<%c> ') + msg
         try:
-            cls.log_dir_writable()
-        except Exception, e:
-            cls.log_error(e)
-
-    @classmethod
-    def identify(cls, id):
-        cls._id = id
-
-    @classmethod
-    def record(cls, action, props={}):
-        try:
-            if not cls.is_initialized_and_identified():
-                return
-            if isinstance(action, dict):
-                return cls.set(action)
-
-            props.update({'_n': action})
-            cls.generate_query('e', props)
-        except Exception, e:
-            cls.log_error(e)
-
-    @classmethod
-    def alias(cls, name, alias_to):
-        try:
-            if not cls.is_initialized_and_identified():
-                return
-            cls.generate_query('a', {'_n': alias_to, '_p': name}, update=False)
-        except Exception, e:
-            cls.log_error(e)
-
-    @classmethod
-    def set(cls, data):
-        try:
-            if not cls.is_initialized_and_identified():
-                return
-            cls.generate_query('s', data)
-        except Exception, e:
-            cls.log_error(e)
-
-    @classmethod
-    def send_logged_queries(cls):
-        try:
-            query_name = cls.log_name('query')
-            if not os.path.exists(query_name):
-                return
-            send_name = cls.log_name('send')
-            shutil.move(query_name, send_name)
-            log = open(send_name)
-            try:
-                for line in log:
-                    try:
-                        line = line.rstrip()
-                        cls.send_query(line)
-                    except Exception, e:
-                        if line:
-                            cls.log_query(line)
-                        cls.log_error(e)
-            finally:
-                log.close()
-                os.unlink(send_name)
-        except Exception, e:
-            cls.log_error(e)
-
-    @classmethod
-    def reset(cls):
-        cls._id = None
-        cls._key = None
-        cls._logs = {}
-
-    @classmethod
-    def log_name(cls, type):
-        if type in cls._logs:
-            return cls._logs[type]
-        fname = ''
-        if type == 'error':
-            fname = 'kissmetrics_error.log'
-        elif type == 'query':
-            fname = 'kissmetrics_query.log'
-        elif type == 'send':
-            fname = '%dkissmetrics_sending.log' % time.time()
-        cls._logs[type] = os.path.join(cls.log_dir, fname)
-        return cls._logs[type]
-
-    @classmethod
-    def log_query(cls, msg):
-        return cls.log('query', msg)
-
-    @classmethod
-    def log_send(cls, msg):
-        return cls.log('send', msg)
-
-    @classmethod
-    def log_error(cls, msg):
-        msg = datetime.now().strftime("<%c> ") + str(msg)
-        if cls._to_stderr:
-            print >>sys.stderr, msg
-        return cls.log('error', msg)
-
-    @classmethod
-    def log(cls, type, msg):
-        try:
-            fh = open(cls.log_name(type), 'a')
-            print >>fh, msg
+            fh = open(self.log_file(), 'a')
+            fh.write(msg)
             fh.close()
-        except:
-            pass                        # just discard at this point
-
-    @classmethod
-    def generate_query(cls, type, data, update=True):
-        if update:
-            data.update({'_p': cls._id})
-        data.update({'_k': cls._key, '_t': int(time.time())})
-        query = '/%s?%s' % (urllib.quote(type), urllib.urlencode(data))
-        if cls._use_cron:
-            cls.log_query(query)
+        except IOError:
+            pass #just discard at this point
+    
+    def request(self, type, data, update=True):
+        query = []
+        
+        # if user has defined their own _t, then include necessary _d
+        if '_t' in data:
+            data['_d'] = 1
         else:
-            try:
-                cls.send_query(query)
-            except Exception, e:
-                cls.log_query(query)
-                cls.log_error(e)
-
-    @classmethod
-    def send_query(cls, line):
-        url = urlparse.urlunsplit(('http', cls.host, line, '', ''))
-        urllib2.urlopen(url, timeout=cls._timeout)
-
-    @classmethod
-    def log_dir_writable(cls):
-        if not os.access(cls.log_dir, os.W_OK) and cls._to_stderr:
-            print >>sys.stderr, (
-                "Couldn't open %s for writing. Does %s exist? Permissions?" %
-                (cls.log_name('query'), cls.log_dir)
-            )
-
-    @classmethod
-    def is_identified(cls):
-        if cls._id is None:
-            cls.log_error("Need to identify first: KM.identify(<user>)")
-            return False
-        return True
-
-    @classmethod
-    def is_initialized_and_identified(cls):
-        if not cls.is_initialized():
-            return False
-        return cls.is_identified()
-
-    @classmethod
-    def is_initialized(cls):
-        if cls._key is None:
-            cls.log_error("Need to initialize first: KM.init(<your_key>)")
-            return False
-        return True
-
-
-def main(*args):
-    if not args:
-        args = sys.argv[:]
-    try:
-        key = args[1]
-    except IndexError:
-        print >>sys.stderr, ("At least one argument required. "
-                             "%s <km_key> [<log_dir>]" % args[0])
-        return 1
-    log_dir, host = None, None
-    try:
-        log_dir = args[2]
-        host = args[3]
-    except IndexError:
-        pass
-    KM.init(key, log_dir=log_dir, host=host)
-    KM.send_logged_queries()
-    return 0
-
-if __name__ == '__main__':
-    sys.exit(main(*sys.argv))
+            data['_t'] = self.now().strftime('%s')
+        
+        # add customer key to data sent
+        data['_k'] = self._key
+        
+        if update:
+            data['_p'] = self._id
+        
+        for key, val in data.items():
+            query.append(urllib.quote(str(key)) + '=' + urllib.quote(str(val)))
+        
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            host, port = self._host.split(':')
+            sock.connect((host, int(port)))
+            sock.setblocking(0) # 0 is non-blocking
+            
+            get = 'GET /' + type + '?' + '&'.join(query) + " HTTP/1.1\r\n"
+            out = get
+            out += "Host: " + socket.gethostname() + "\r\n"
+            out += "Connection: Close\r\n\r\n";
+            sock.send(out)
+            sock.close()
+        except:
+            self.logm("Could not transmit to " + self._host)

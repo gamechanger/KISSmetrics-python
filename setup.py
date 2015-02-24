@@ -2,8 +2,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name = "KISSmetrics",
-    version = "1.0.2",
+    name = "gcKISSmetrics",
+    version = "1.0.3",
     packages = find_packages(),
 
     # metadata for upload to PyPI
@@ -22,7 +22,7 @@ Find out more at http://www.kissmetrics.com
     ),
     license = 'Other/Proprietary License',
     keywords = 'kissmetrics',
-    url = 'http://github.com/kissmetrics/KISSmetrics',
+    url = 'http://github.com/gamechanger/KISSmetrics-python',
 
     # Script for running cronjob
     entry_points = {
